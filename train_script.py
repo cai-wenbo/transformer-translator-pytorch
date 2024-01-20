@@ -101,7 +101,6 @@ def train_eval_loop(training_config, model, dataloader_train, dataloader_eval, o
             b_predictions = torch.argmax(b_predicted_log_distributions, dim=2)
             err += (b_predictions != b_text_trg).sum().item()
             num_tokens += torch.sum(~b_mask_trg).item()
-            print(num_tokens)
 
 
 
@@ -145,7 +144,7 @@ def train_eval_loop(training_config, model, dataloader_train, dataloader_eval, o
 
 
 
-        print(f'Epoch: {epoch+1} \n Train Loss: {train_loss:.6f}, train Eval Loss: {eval_loss:.6f}')
+        print(f'Epoch: {epoch+1} \n Train Loss: {train_loss:.6f}, Train Acc: {train_acc:.6f} \ntrain Eval Loss: {eval_loss:.6f}, Eval Acc: {eval_acc:.6f}')
 
 
 
