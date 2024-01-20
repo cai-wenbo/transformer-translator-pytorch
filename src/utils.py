@@ -12,7 +12,6 @@ def pad_to_max_with_mask(data):
     max_len_src = max(text_tuple[0].shape[-1] for text_tuple in data)
     max_len_trg = max(text_tuple[1].shape[-1] for text_tuple in data)
 
-
     #  create the mask
     b_text_src_tensor = torch.zeros((len(data), max_len_src))
     b_text_trg_tensor = torch.zeros((len(data), max_len_trg))
@@ -24,6 +23,11 @@ def pad_to_max_with_mask(data):
         b_text_trg_tensor[i] = F.pad(data[i][1], (0, max_len_trg - data[i][1].shape[-1]), "constant", 0)
         b_mask_src_tensor[i, :data[i][0].shape[-1]] = 0
         b_mask_trg_tensor[i, :data[i][1].shape[-1]] = 0
+
+    print(b_text_src_tensor.shape)
+    print(b_text_trg_tensor.shape)
+    print(b_mask_src_tensor.shape)
+    print(b_mask_trg_tensor.shape)
     return b_text_src_tensor, b_text_trg_tensor, b_mask_src_tensor, b_mask_trg_tensor
 
 
