@@ -52,6 +52,7 @@ class parallelCorpus(Dataset):
 
             while line:
                 line = line.strip()
+                line = "<s> "+ line + " </s>"
                 encoding = tokenizer_trg.encode(line)
 
                 text_trg.append(encoding.ids)
