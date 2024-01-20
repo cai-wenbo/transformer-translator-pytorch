@@ -72,8 +72,7 @@ def train_eval_loop(training_config, model, dataloader_train, dataloader_eval, o
 
             optimizer.zero_grad()
             b_predicted_log_distributions = model(b_text_src, b_text_trg, b_mask_src, b_mask_trg)
-
-            b_smooth_label = label_smoothing(b_text_trg, training_config["trg_vocab_size"], training_config["num_special_tokens_trg"]),
+            b_smooth_label = label_smoothing(b_text_trg, training_config["trg_vocab_size"], training_config["num_special_tokens_trg"])
 
 
             loss = creterian(b_predicted_log_distributions, b_smooth_label)
@@ -109,7 +108,7 @@ def train_eval_loop(training_config, model, dataloader_train, dataloader_eval, o
             with torch.no_grad():
                 b_predicted_log_distributions = model(b_text_src, b_text_trg, b_mask_src, b_mask_trg)
 
-                b_smooth_label = label_smoothing(b_text_trg, training_config["trg_vocab_size"], training_config["num_special_tokens_trg"]),
+                b_smooth_label = label_smoothing(b_text_trg, training_config["trg_vocab_size"], training_config["num_special_tokens_trg"])
 
 
                 loss = creterian(b_predicted_log_distributions, b_smooth_label)
@@ -226,7 +225,7 @@ def train(training_config):
     '''
 
     model = model.to('cpu').module
-    model.save_pretrained(training_config['model_path_dst'])
+    torch.save(model.state_dict(), training_config['model_path_dst'])
 
     #  save the loss of the steps
     save_trails(training_config, step_losses, train_losses, eval_losses)
@@ -237,7 +236,7 @@ def train(training_config):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_of_epochs"    , type=int   , help="number of epochs"                                  , default=20)
-    parser.add_argument("--batch_size"       , type=int   , help="batch size"                                        , default=128)
+    parser.add_argument("--batch_size"       , type=int   , help="batch size"                                        , default=512)
     parser.add_argument("--learning_rate"    , type=float , help="learning rate"                                     , default=1e-4)
     parser.add_argument("--weight_decay"     , type=float , help="weight_decay"                                      , default=1e-4)
     parser.add_argument("--dropout_probability"     , type=float , help="dropout prob"                                      , default=1e-1)

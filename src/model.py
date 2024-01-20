@@ -30,7 +30,7 @@ class Transformer(nn.Module):
 
         self.transformer_body = nn.Transformer(
                 d_model            = model_dimension,
-                nhead              = 8,
+                nhead              = number_of_heads,
                 num_encoder_layers = number_of_layers,
                 num_decoder_layers = number_of_layers,
                 dropout            = dropout_probability,
@@ -43,14 +43,14 @@ class Transformer(nn.Module):
 
     def forward(self, b_text_src, b_text_trg, b_mask_src, b_mask_trg):
         src_embedding_batch = self.src_embedding(b_text_src)
-        src_embedding_batch = self.src_pos_encoding(b_text_src)
+        src_embedding_batch = self.src_pos_encoding(src_embedding_batch)
 
         trg_embedding_batch = self.trg_embedding(b_text_trg)
-        trg_embedding_batch = self.trg_pos_encoding(b_text_trg)
+        trg_embedding_batch = self.trg_pos_encoding(trg_embedding_batch)
 
         transformer_out = self.transformer_body(
                 src = src_embedding_batch,
-                trg = trg_embedding_batch,
+                tgt = trg_embedding_batch,
                 src_key_padding_mask = b_mask_src,
                 tgt_key_padding_mask = b_mask_trg,
                 memory_key_padding_mask = b_mask_src
@@ -92,6 +92,7 @@ class PositionalEncoding(nn.Module):
         # Register buffer because we want to save the positional encodings table inside state_dict even though
         # these are not trainable (not model's parameters) so they otherwise would be excluded from the state_dict
         self.register_buffer('positional_encodings_table', positional_encodings_table)
+        self.dropout = nn.Dropout(dropout_probability)
 
 
     def forward(self, embeddings_batch):
