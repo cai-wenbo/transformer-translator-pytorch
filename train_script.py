@@ -115,7 +115,8 @@ def train_eval_loop(training_config, model, dataloader_train, dataloader_eval, o
 
 
         loss_sum_eval = 0
-        correct = 0
+        err            = 0
+        num_tokens     = 0
 
 
         model.eval() 
