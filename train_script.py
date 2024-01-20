@@ -51,17 +51,17 @@ def load_trails(training_config):
             train_losses = json.load(file)
             file.close()
     
-    test_losses = list()
-    if os.path.exists(training_config['test_losses_pth']):
-        with open(training_config['test_losses_pth'], 'r') as file:
-            test_losses = json.load(file)
+    eval_losses = list()
+    if os.path.exists(training_config['eval_losses_pth']):
+        with open(training_config['eval_losses_pth'], 'r') as file:
+            eval_losses = json.load(file)
             file.close()
 
 
-    return step_losses, train_losses, test_losses
+    return step_losses, train_losses, eval_losses
 
 
-def train_test_loop(training_config, model, dataloader_train, dataloader_test, optimizer, creterian, step_losses, train_losses, test_losses, device):
+def train_eval_loop(training_config, model, dataloader_train, dataloader_eval, optimizer, creterian, step_losses, train_losses, eval_losses, device):
     for epoch in range(training_config['num_of_epochs']):
         loss_sum_train = 0
         model.train()
@@ -96,13 +96,13 @@ def train_test_loop(training_config, model, dataloader_train, dataloader_test, o
 
 
 
-        loss_sum_test = 0
+        loss_sum_eval = 0
         correct = 0
 
 
         model.eval() 
-        #  test_loop
-        for i, batch in enumerate(dataloader_test):
+        #  eval_loop
+        for i, batch in enumerate(dataloader_eval):
             batch = tuple(t.to(device) for t in batch)
             b_text_src, b_text_trg, b_mask_src, b_mask_trg = batch
 
@@ -116,18 +116,18 @@ def train_test_loop(training_config, model, dataloader_train, dataloader_test, o
 
 
                 loss_scalar = loss.item()
-                loss_sum_test += loss_scalar
+                loss_sum_eval += loss_scalar
 
-        test_loss = loss_sum_test / len(dataloader_test)
-        test_losses.append(test_loss)
-
-
-
-        print(f'Epoch: {epoch+1} \n Train Loss: {train_loss:.6f}, train Test Loss: {test_loss:.6f}')
+        eval_loss = loss_sum_eval / len(dataloader_eval)
+        eval_losses.append(eval_loss)
 
 
 
-def save_trails(training_config, step_losses, train_losses, test_losses):
+        print(f'Epoch: {epoch+1} \n Train Loss: {train_loss:.6f}, train Eval Loss: {eval_loss:.6f}')
+
+
+
+def save_trails(training_config, step_losses, train_losses, eval_losses):
     with open(training_config['step_losses_pth'], 'w') as file:
         json.dump(step_losses, file)
         file.close()
@@ -136,8 +136,8 @@ def save_trails(training_config, step_losses, train_losses, test_losses):
         json.dump(train_losses, file)
         file.close()
     
-    with open(training_config['test_losses_pth'], 'w') as file:
-        json.dump(test_losses, file)
+    with open(training_config['eval_losses_pth'], 'w') as file:
+        json.dump(eval_losses, file)
         file.close()
 
 
@@ -154,18 +154,19 @@ def train(training_config):
 
 
     #  load the losses history
-    step_losses, train_losses, test_losses = load_trails(training_config)
+    step_losses, train_losses, eval_losses = load_trails(training_config)
 
 
 
     '''
     dataloader
     '''
-    train_dataset = parallelCorpus(corpus_path_src='./data/train.zh' , corpus_path_trg='./data/train.en' , tokenizer_path_src='./data/tokenizer_zh' , tokenizer_path_trg='./data/tokenizer_en')
-    test_dataset = parallelCorpus(corpus_path_src='./data/test.zh'   , corpus_path_trg='./data/test.en'  , tokenizer_path_src='./data/tokenizer_zh' , tokenizer_path_trg='./data/tokenizer_en')
+    train_dataset = parallelCorpus(corpus_path_src=training_config["data_path_eval_src"], corpus_path_trg=training_config["data_path_eval_trg"]  , tokenizer_path_src=training_config["tokenizer_path_src"] , tokenizer_path_trg=training_config["tokenizer_path_trg"])
+    eval_dataset = parallelCorpus(corpus_path_src=training_config["data_path_eval_src"], corpus_path_trg=training_config["data_path_eval_trg"]  , tokenizer_path_src=training_config["tokenizer_path_src"] , tokenizer_path_trg=training_config["tokenizer_path_trg"])
 
-    dataloader_train = DataLoader(train_dataset , batch_size = training_config['batch_size']  , shuffle = True)
-    dataloader_test  = DataLoader(test_dataset  , batch_size  = training_config['batch_size'] , shuffle = False)
+
+    dataloader_train = DataLoader(train_dataset, collate_fn=pad_to_max_with_mask, batch_size=5, shuffle=True)
+    dataloader_eval = DataLoader(eval_dataset, collate_fn=pad_to_max_with_mask, batch_size=5, shuffle=False)
 
 
     '''
@@ -216,7 +217,7 @@ def train(training_config):
         print(f"Using {torch.cuda.device_count()} GPUs.")
         model = nn.DataParallel(model)
 
-    train_test_loop(training_config, model, dataloader_train, dataloader_test, optimizer, creterian, step_losses, train_losses, test_losses, device)
+    train_eval_loop(training_config, model, dataloader_train, dataloader_eval, optimizer, creterian, step_losses, train_losses, eval_losses, device)
 
 
         
@@ -228,7 +229,7 @@ def train(training_config):
     model.save_pretrained(training_config['model_path_dst'])
 
     #  save the loss of the steps
-    save_trails(training_config, step_losses, train_losses, test_losses)
+    save_trails(training_config, step_losses, train_losses, eval_losses)
 
 
 
@@ -249,13 +250,19 @@ if __name__ == "__main__":
     parser.add_argument("--num_labels"       , type=int   , help="types of labels"                                   , default=6)
     parser.add_argument("--num_neg"       , type=int   , help="num of neg"                                   , default=2)
     parser.add_argument("--sequence_length"  , type=int   , help="sequence_length"                                   , default=128)
+    parser.add_argument("--tokenizer_path_src"   , type=str   , help="the saved tokenizer of src language"                       , default='./data/tokenizer_zh')
+    parser.add_argument("--tokenizer_path_trg"   , type=str   , help="the saved tokenizer of trg language"                       , default='./data/tokenizer_en')
+    parser.add_argument("--data_path_train_src"   , type=str   , help="the training dataset of src language"                       , default='./data/train.zh')
+    parser.add_argument("--data_path_train_trg"   , type=str   , help="the training dataset of trg language"                       , default='./data/train.en')
+    parser.add_argument("--data_path_eval_src"   , type=str   , help="the eval dataset of src language"                       , default='./data/val.zh')
+    parser.add_argument("--data_path_eval_trg"   , type=str   , help="the eval dataset of trg language"                       , default='./data/val.en')
     parser.add_argument("--model_path_dst"   , type=str   , help="the directory to save model"                       , default='./saved_models/saved_dict.pth')
     parser.add_argument("--model_path_src"   , type=str   , help="the directory to load model"                       , default='./saved_models/saved_dict.pth')
     parser.add_argument("--step_losses_pth"  , type=str   , help="the path of the json file that saves step losses"  , default='./trails/step_losses.json')
     parser.add_argument("--train_losses_pth" , type=str   , help="the path of the json file that saves train losses" , default='./trails/train_losses.json')
-    parser.add_argument("--test_losses_pth"  , type=str   , help="the path of the json file that saves test losses"  , default='./trails/test_losses.json')
+    parser.add_argument("--eval_losses_pth"  , type=str   , help="the path of the json file that saves eval losses"  , default='./trails/eval_losses.json')
     #  parser.add_argument("--train_accuracy_pth" , type=str   , help="the path of the json file that saves train accuracy" , default='./trails/train_accuracy.json')
-    #  parser.add_argument("--test_accuracy_pth"  , type=str   , help="the path of the json file that saves test accuracy"  , default='./trails/test_accuracy.json')
+    #  parser.add_argument("--eval_accuracy_pth"  , type=str   , help="the path of the json file that saves eval accuracy"  , default='./trails/eval_accuracy.json')
 
     
     args = parser.parse_args()
@@ -264,6 +271,6 @@ if __name__ == "__main__":
     for arg in vars(args):
         training_config[arg] = getattr(args, arg)
 
-    #  train(training_config)
+    train(training_config)
 
 
