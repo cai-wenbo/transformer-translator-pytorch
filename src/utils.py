@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
-
+from .model import Transformer
+import os
 
 
 def pad_to_max_with_mask(data):
@@ -39,3 +40,26 @@ def label_smoothing(tensor, num_classes, num_special_tokens, smoothing_value = 0
 
 
     return smooth_label
+
+
+
+
+def greedy_decoding(model, text_src, max_output_len = 100, BOS_id = 3, EOS_id = 4):
+    text_trg = torch.tensor([[BOS_id]])
+
+    while text_trg.shape[-1] < max_output_len:
+        text_trg = F.pad(text_trg, (0, 1), "constant", 0)
+        mask_src = torch.zeros_like(text_src, dtype = torch.bool)
+        mask_trg = torch.zeros_like(text_trg, dtype = torch.bool)
+        
+
+        predicted_log_distributions = model(text_src, text_trg, mask_src, mask_trg)
+        next_log_prediction = predicted_log_distributions[:,-1,:]
+        next_prediction = torch.argmax(next_log_prediction, dim=2)
+
+        text_trg[0][-1] = next_prediction
+
+        if next_prediction == EOS_id:
+            break
+
+    return text_trg
