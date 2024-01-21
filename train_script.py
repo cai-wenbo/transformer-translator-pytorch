@@ -1,4 +1,5 @@
 from numpy import shape
+from tqdm import tqdm
 import torch
 from torch.cuda import utilization
 import torch.nn as nn
@@ -81,7 +82,7 @@ def train_eval_loop(training_config, model, dataloader_train, dataloader_eval, o
 
         model.train()
         #  train loop
-        for i, batch in enumerate(dataloader_train):
+        for i, batch in tqdm(enumerate(dataloader_train)):
             batch = tuple(t.to(device) for t in batch)
             b_text_src, b_text_trg, b_mask_src, b_mask_trg = batch
 
@@ -122,7 +123,7 @@ def train_eval_loop(training_config, model, dataloader_train, dataloader_eval, o
 
         model.eval() 
         #  eval_loop
-        for i, batch in enumerate(dataloader_eval):
+        for i, batch in tqdm(enumerate(dataloader_eval)):
             batch = tuple(t.to(device) for t in batch)
             b_text_src, b_text_trg, b_mask_src, b_mask_trg = batch
 

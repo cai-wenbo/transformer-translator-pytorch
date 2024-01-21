@@ -34,7 +34,6 @@ class Transformer(nn.Module):
                 num_encoder_layers = number_of_layers,
                 num_decoder_layers = number_of_layers,
                 dropout            = dropout_probability,
-                batch_first        = True
                 )
 
 
