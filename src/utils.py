@@ -45,17 +45,21 @@ def label_smoothing(tensor, num_classes, num_special_tokens, smoothing_value = 0
 
 
 def greedy_decoding(model, text_src, max_output_len = 100, BOS_id = 3, EOS_id = 4):
-    text_trg = torch.tensor([[BOS_id]])
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+    text_trg = torch.tensor([[BOS_id]]).to(device)
 
     while text_trg.shape[-1] < max_output_len:
         text_trg = F.pad(text_trg, (0, 1), "constant", 0)
-        mask_src = torch.zeros_like(text_src, dtype = torch.bool)
-        mask_trg = torch.zeros_like(text_trg, dtype = torch.bool)
-        
+        mask_src = torch.zeros_like(text_src, dtype = torch.bool).to(device)
+        mask_trg = torch.zeros_like(text_trg, dtype = torch.bool).to(device)
 
         predicted_log_distributions = model(text_src, text_trg, mask_src, mask_trg)
-        next_log_prediction = predicted_log_distributions[:,-1,:]
+        print(predicted_log_distributions.shape)
+        next_log_prediction = predicted_log_distributions[:,-1:,:]
+        print(next_log_prediction.shape)
         next_prediction = torch.argmax(next_log_prediction, dim=2)
+
+        print(next_prediction)
 
         text_trg[0][-1] = next_prediction
 

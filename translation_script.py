@@ -47,7 +47,7 @@ def translate(training_config):
     '''
     dataloader
     '''
-    test_dataset = parallelCorpus(corpus_path_src=training_config["data_path_eval_src"], corpus_path_trg=training_config["data_path_eval_trg"]  , tokenizer_path_src=training_config["tokenizer_path_src"] , tokenizer_path_trg=training_config["tokenizer_path_trg"])
+    test_dataset = parallelCorpus(corpus_path_src=training_config["data_path_test_src"], corpus_path_trg=training_config["data_path_test_trg"]  , tokenizer_path_src=training_config["tokenizer_path_src"] , tokenizer_path_trg=training_config["tokenizer_path_trg"])
     dataloader_test = DataLoader(test_dataset, collate_fn=pad_to_max_with_mask, batch_size=5, shuffle=True)
 
 
@@ -101,14 +101,16 @@ def translate(training_config):
             tokenizer_path_trg + "/merges.txt"
             )
 
-    with open(training_config['step_losses_pth'], 'w') as file:
+    with open(training_config['translation_output_path'], 'w') as file:
         for i, batch in enumerate(dataloader_test):
             batch = tuple(t.to(device) for t in batch)
-            text_src, _, _, _ = batch
+            text_src, text_trg = batch
+            print(text_trg)
 
-            trg_out = greedy_decoding(model, text_src, max_output_len=training_config["max_output_len"]).squeeze(0).tolist()
+            trg_out = greedy_decoding(model, text_src, max_output_len=training_config["max_target_tokens"]).squeeze(0).tolist()
 
-            file.write(tokenizer.decode(trg_out))
+            file.write(tokenizer.decode(trg_out) + '\n')
+            break
         file.close()
 
 

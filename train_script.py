@@ -86,8 +86,8 @@ def train_eval_loop(training_config, model, dataloader_train, dataloader_eval, o
             b_text_src, b_text_trg, b_mask_src, b_mask_trg = batch
 
             optimizer.zero_grad()
-            b_predicted_log_distributions = model(b_text_src, b_text_trg, b_mask_src, b_mask_trg)
-            b_smooth_label = label_smoothing(b_text_trg, training_config["trg_vocab_size"], training_config["num_special_tokens_trg"])
+            b_predicted_log_distributions = model(b_text_src, b_text_trg[:,:-1], b_mask_src, b_mask_trg[:,:-1])
+            b_smooth_label = label_smoothing(b_text_trg[:,1:], training_config["trg_vocab_size"], training_config["num_special_tokens_trg"])
 
 
             loss = creterian(b_predicted_log_distributions, b_smooth_label)
@@ -99,6 +99,9 @@ def train_eval_loop(training_config, model, dataloader_train, dataloader_eval, o
             step_losses.append(loss_scalar)
 
             b_predictions = torch.argmax(b_predicted_log_distributions, dim=2)
+            print(b_predictions[0])
+            print(b_smooth_label[0])
+
             err += (b_predictions != b_text_trg).sum().item()
             num_tokens += torch.sum(~b_mask_trg).item()
 
@@ -126,8 +129,8 @@ def train_eval_loop(training_config, model, dataloader_train, dataloader_eval, o
             b_text_src, b_text_trg, b_mask_src, b_mask_trg = batch
 
             with torch.no_grad():
-                b_predicted_log_distributions = model(b_text_src, b_text_trg, b_mask_src, b_mask_trg)
-                b_smooth_label = label_smoothing(b_text_trg, training_config["trg_vocab_size"], training_config["num_special_tokens_trg"])
+                b_predicted_log_distributions = model(b_text_src, b_text_trg[:,:-1], b_mask_src, b_mask_trg[:,:-1])
+                b_smooth_label = label_smoothing(b_text_trg[:,1:], training_config["trg_vocab_size"], training_config["num_special_tokens_trg"])
 
                 loss = creterian(b_predicted_log_distributions, b_smooth_label)
                 loss_scalar = loss.item()
@@ -191,7 +194,7 @@ def train(training_config):
     '''
     dataloader
     '''
-    train_dataset = parallelCorpus(corpus_path_src=training_config["data_path_eval_src"], corpus_path_trg=training_config["data_path_eval_trg"]  , tokenizer_path_src=training_config["tokenizer_path_src"] , tokenizer_path_trg=training_config["tokenizer_path_trg"])
+    train_dataset = parallelCorpus(corpus_path_src=training_config["data_path_train_src"], corpus_path_trg=training_config["data_path_train_trg"]  , tokenizer_path_src=training_config["tokenizer_path_src"] , tokenizer_path_trg=training_config["tokenizer_path_trg"])
     eval_dataset = parallelCorpus(corpus_path_src=training_config["data_path_eval_src"], corpus_path_trg=training_config["data_path_eval_trg"]  , tokenizer_path_src=training_config["tokenizer_path_src"] , tokenizer_path_trg=training_config["tokenizer_path_trg"])
 
 

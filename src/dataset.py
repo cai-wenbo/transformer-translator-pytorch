@@ -35,10 +35,10 @@ class parallelCorpus(Dataset):
 
             while line:
                 line = line.strip()
-                line = "<s> "+ line + " </s>"
                 encoding = tokenizer_src.encode(line)
+                token_list = [3] + encoding.ids + [4]
 
-                text_src.append(encoding.ids)
+                text_src.append(token_list)
                 #  mask_src.append(encoding.)
 
                 line = file.readline()
@@ -52,10 +52,10 @@ class parallelCorpus(Dataset):
 
             while line:
                 line = line.strip()
-                line = "<s> "+ line + " </s>"
                 encoding = tokenizer_trg.encode(line)
+                token_list = [3] + encoding.ids + [4]
 
-                text_trg.append(encoding.ids)
+                text_trg.append(token_list)
                 #  mask_trg.append(encoding.)
 
                 line = file.readline()
