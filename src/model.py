@@ -53,7 +53,8 @@ class Transformer(nn.Module):
                 tgt = trg_embedding_batch,
                 src_key_padding_mask = b_mask_src,
                 tgt_key_padding_mask = b_mask_trg,
-                memory_key_padding_mask = b_mask_src
+                memory_key_padding_mask = b_mask_src,
+                tgt_is_causal = True
                 )
 
         linear_out = self.linear(transformer_out)
