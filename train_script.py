@@ -146,7 +146,7 @@ def train_eval_loop(training_config, model, dataloader_train, dataloader_eval, o
 
 
 
-        print(f'Epoch: {epoch+1} \n Train Loss: {train_loss:.6f}, Train Acc: {train_acc:.6f} \ntrain Eval Loss: {eval_loss:.6f}, Eval Acc: {eval_acc:.6f}')
+        print(f'Epoch: {epoch+1} \n Train Loss: {train_loss:.6f}, Train Acc: {train_acc:.6f} \n Eval Loss: {eval_loss:.6f}, Eval Acc: {eval_acc:.6f}')
 
 
 
