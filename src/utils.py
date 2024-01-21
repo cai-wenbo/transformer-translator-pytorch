@@ -57,7 +57,6 @@ def greedy_decoding(model, text_src, max_output_len = 100, BOS_id = 3, EOS_id = 
         next_log_prediction = predicted_log_distributions[:,-1:,:]
         next_prediction = torch.argmax(next_log_prediction, dim=2)
 
-        print(next_prediction)
 
         #  text_trg[0][-1] = next_prediction
         #  text_trg = F.pad(text_trg, (0, 1), "constant", next_prediction)

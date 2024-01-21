@@ -14,41 +14,41 @@ import os
 import argparse
 
 
-def load_model(model_path_src, training_config):
+def load_model(model_path_src, translation_config):
     '''
     load model
     '''
     model = Transformer(
-            model_dimension     = training_config["model_dimension"],
-            src_vocab_size      = training_config["src_vocab_size"],
-            trg_vocab_size      = training_config["trg_vocab_size"],
-            number_of_heads     = training_config["number_of_heads"],
-            number_of_layers    = training_config["number_of_layers"],
-            dropout_probability = training_config["dropout_probability"],
+            model_dimension     = translation_config["model_dimension"],
+            src_vocab_size      = translation_config["src_vocab_size"],
+            trg_vocab_size      = translation_config["trg_vocab_size"],
+            number_of_heads     = translation_config["number_of_heads"],
+            number_of_layers    = translation_config["number_of_layers"],
+            dropout_probability = translation_config["dropout_probability"],
             )
 
 
     if os.path.exists(model_path_src):
-        model_dict = torch.load(training_config['model_path_src'])
+        model_dict = torch.load(translation_config['model_path_src'])
         model.load_state_dict(model_dict)
 
     return model
 
 
-def translate(training_config):
+def translate(translation_config):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
 
     '''
     model
     load model 
     '''
-    model = load_model(training_config['model_path_src'], training_config).to(device)
+    model = load_model(translation_config['model_path_src'], translation_config).to(device)
 
     '''
     dataloader
     '''
-    test_dataset = parallelCorpus(corpus_path_src=training_config["data_path_test_src"], corpus_path_trg=training_config["data_path_test_trg"]  , tokenizer_path_src=training_config["tokenizer_path_src"] , tokenizer_path_trg=training_config["tokenizer_path_trg"])
-    dataloader_test = DataLoader(test_dataset, collate_fn=pad_to_max_with_mask, batch_size=5, shuffle=True)
+    test_dataset = parallelCorpus(corpus_path_src=translation_config["data_path_test_src"], corpus_path_trg=translation_config["data_path_test_trg"]  , tokenizer_path_src=translation_config["tokenizer_path_src"] , tokenizer_path_trg=translation_config["tokenizer_path_trg"])
+    dataloader_test = DataLoader(test_dataset, collate_fn=pad_to_max_with_mask, batch_size=5, shuffle=False)
 
 
     '''
@@ -71,16 +71,18 @@ def translate(training_config):
         b_text_src, b_text_trg, b_mask_src, b_mask_trg = batch
 
         with torch.no_grad():
-            b_predicted_log_distributions = model(b_text_src, b_text_trg, b_mask_src, b_mask_trg)
-            b_smooth_label = label_smoothing(b_text_trg, training_config["trg_vocab_size"], training_config["num_special_tokens_trg"])
+            #  b_mask_src = torch.ones_like(b_text_src, dtype = torch.bool)
+            #  b_text_src = torch.ones_like(b_text_src, dtype = torch.long)
+            b_predicted_log_distributions = model(b_text_src, b_text_trg[:,:-1], b_mask_src, b_mask_trg[:,:-1])
+            b_smooth_label = label_smoothing(b_text_trg[:,1:], translation_config["trg_vocab_size"], translation_config["num_special_tokens_trg"])
 
             loss = creterian(b_predicted_log_distributions, b_smooth_label)
             loss_scalar = loss.item()
             loss_sum_test += loss_scalar
 
             b_predictions = torch.argmax(b_predicted_log_distributions, dim=2)
-            err += (b_predictions != b_text_trg).sum().item()
-            num_tokens += torch.sum(~b_mask_trg).item()
+            err += (b_predictions != b_text_trg[:,1:]).sum().item()
+            num_tokens += torch.sum(~b_mask_trg[:,:-1]).item()
 
 
     test_loss = loss_sum_test / len(dataloader_test)
@@ -89,28 +91,52 @@ def translate(training_config):
     print(f'Test Loss: {test_loss:.6f}, Test Acc: {test_acc:.6f}')
 
 
+    for i, batch in enumerate(dataloader_test):
+        batch = tuple(t.to(device) for t in batch)
+        b_text_src, b_text_trg, b_mask_src, b_mask_trg = batch
+
+        with torch.no_grad():
+            b_mask_src = torch.ones_like(b_text_src, dtype = torch.bool)
+            #  b_text_src = torch.ones_like(b_text_src, dtype = torch.long)
+            b_predicted_log_distributions = model(b_text_src, b_text_trg[:,:-1], b_mask_src, b_mask_trg[:,:-1])
+            b_smooth_label = label_smoothing(b_text_trg[:,1:], translation_config["trg_vocab_size"], translation_config["num_special_tokens_trg"])
+
+            loss = creterian(b_predicted_log_distributions, b_smooth_label)
+            loss_scalar = loss.item()
+            loss_sum_test += loss_scalar
+
+            b_predictions = torch.argmax(b_predicted_log_distributions, dim=2)
+            err += (b_predictions != b_text_trg[:,1:]).sum().item()
+            num_tokens += torch.sum(~b_mask_trg[:,:-1]).item()
+
+
+    test_loss = loss_sum_test / len(dataloader_test)
+    test_acc = 1 - err / num_tokens
+
+    print("when the src is masked out")
+    print(f'Test Loss: {test_loss:.6f}, Test Acc: {test_acc:.6f}')
+
+
     '''
     translate and output to another file
     '''
     dataloader_test = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
-    tokenizer_path_trg = training_config["tokenizer_path_trg"]
+    tokenizer_path_trg = translation_config["tokenizer_path_trg"]
 
     tokenizer = ByteLevelBPETokenizer(
             tokenizer_path_trg + "/vocab.json",
             tokenizer_path_trg + "/merges.txt"
             )
 
-    with open(training_config['translation_output_path'], 'w') as file:
+    with open(translation_config['translation_output_path'], 'w') as file:
         for i, batch in enumerate(dataloader_test):
             batch = tuple(t.to(device) for t in batch)
             text_src, text_trg = batch
-            print(text_trg)
 
-            trg_out = greedy_decoding(model, text_src, max_output_len=training_config["max_target_tokens"]).squeeze(0).tolist()
+            trg_out = greedy_decoding(model, text_src, max_output_len=translation_config["max_target_tokens"]).squeeze(0).tolist()
 
             file.write(tokenizer.decode(trg_out) + '\n')
-            break
         file.close()
 
 
@@ -137,8 +163,8 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    training_config = dict()
+    translation_config = dict()
     for arg in vars(args):
-        training_config[arg] = getattr(args, arg)
+        translation_config[arg] = getattr(args, arg)
 
-    translate(training_config)
+    translate(translation_config)
