@@ -111,6 +111,8 @@ class PositionalEncoding(nn.Module):
 
 
 def get_causal_mask(size):
-    raw_mask = torch.zeros((size, size), dtype=torch.bool)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+    raw_mask = torch.ones((size, size), dtype=torch.bool)
     triled_mask = torch.tril(raw_mask)
     triled_mask = ~triled_mask
+    return triled_mask.to(device)
