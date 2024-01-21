@@ -48,9 +48,11 @@ class Transformer(nn.Module):
         trg_embedding_batch = self.trg_embedding(b_text_trg)
         trg_embedding_batch = self.trg_pos_encoding(trg_embedding_batch)
 
+        mask = get_causal_mask(b_text_trg.shape[-1])
         transformer_out = self.transformer_body(
                 src = src_embedding_batch,
                 tgt = trg_embedding_batch,
+                tgt_mask = mask,
                 src_key_padding_mask = b_mask_src,
                 tgt_key_padding_mask = b_mask_trg,
                 memory_key_padding_mask = b_mask_src,
@@ -106,3 +108,9 @@ class PositionalEncoding(nn.Module):
         # (stated in the paper) Applying dropout to the sum of positional encodings and token embeddings
         # Page 7, Chapter 5.4 "Regularization"
         return self.dropout(embeddings_batch + positional_encodings)
+
+
+def get_causal_mask(size):
+    raw_mask = torch.zeros((size, size), dtype=torch.bool)
+    triled_mask = torch.tril(raw_mask)
+    triled_mask = ~triled_mask
