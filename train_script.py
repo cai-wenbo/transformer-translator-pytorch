@@ -99,11 +99,9 @@ def train_eval_loop(training_config, model, dataloader_train, dataloader_eval, o
             step_losses.append(loss_scalar)
 
             b_predictions = torch.argmax(b_predicted_log_distributions, dim=2)
-            print(b_predictions[0])
-            print(b_smooth_label[0])
 
-            err += (b_predictions != b_text_trg).sum().item()
-            num_tokens += torch.sum(~b_mask_trg).item()
+            err += (b_predictions != b_text_trg[:,1:]).sum().item()
+            num_tokens += torch.sum(~b_mask_trg[:,:-1]).item()
 
 
 
@@ -137,8 +135,8 @@ def train_eval_loop(training_config, model, dataloader_train, dataloader_eval, o
                 loss_sum_eval += loss_scalar
 
                 b_predictions = torch.argmax(b_predicted_log_distributions, dim=2)
-                err += (b_predictions != b_text_trg).sum().item()
-                num_tokens += torch.sum(~b_mask_trg).item()
+                err += (b_predictions != b_text_trg[:,1:]).sum().item()
+                num_tokens += torch.sum(~b_mask_trg[:,:-1]).item()
 
 
         eval_loss = loss_sum_eval / len(dataloader_eval)
