@@ -34,6 +34,7 @@ class Transformer(nn.Module):
                 num_encoder_layers = number_of_layers,
                 num_decoder_layers = number_of_layers,
                 dropout            = dropout_probability,
+                batch_first= True
                 )
 
 
@@ -53,7 +54,6 @@ class Transformer(nn.Module):
                 src_key_padding_mask = b_mask_src,
                 tgt_key_padding_mask = b_mask_trg,
                 memory_key_padding_mask = b_mask_src,
-                tgt_is_causal = True
                 )
 
         linear_out = self.linear(transformer_out)
